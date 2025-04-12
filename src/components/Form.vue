@@ -1,7 +1,11 @@
 <script lang="ts" setup>
-import { reactive, ref, watchEffect } from "vue";
+import { reactive, ref, watch, watchEffect } from "vue";
 import type { Pacient, AlertType } from "../types/pacient";
 import AlertShown from "./AlertShown.vue";
+
+const props = defineProps<{
+    pacientToEdit: Pacient | undefined;
+}>();
 
 const emits = defineEmits<{
     (e: "submitPacient", pacient: Pacient): void;
@@ -15,6 +19,7 @@ const alertObject = reactive<AlertType>({
 });
 
 const pacient = reactive<Pacient>({
+    id: null,
     petName: "",
     ownerName: "",
     ownerMail: "",
@@ -28,10 +33,27 @@ const validate = () => {
         alertObject.type = "error";
         return;
     } else {
-        alertObject.message = "Guardado correctamente";
-        alertObject.type = "success";
-        emits("submitPacient", pacient);
+        if (props.pacientToEdit) {
+            emits("submitPacient", { ...pacient, id: props.pacientToEdit.id });
+            alertObject.message = "Editado correctamente";
+            alertObject.type = "success";
+        } else {
+            emits("submitPacient", pacient);
+            alertObject.message = "Guardado correctamente";
+            alertObject.type = "success";
+        }
+        setTimeout(() => {
+            Object.assign(alertObject, {
+                type: "",
+                message: "",
+            });
+        }, 3000);
     }
+    pacient.petName = "";
+    pacient.ownerName = "";
+    pacient.ownerMail = "";
+    pacient.entryDate = "";
+    pacient.symptoms = "";
 };
 
 watchEffect(() => {
@@ -41,14 +63,24 @@ watchEffect(() => {
         isValid.value = false;
     }
 });
+
+watch(
+    () => props.pacientToEdit,
+    () => {
+        if (props.pacientToEdit) {
+            pacient.petName = props.pacientToEdit?.petName;
+            pacient.ownerName = props.pacientToEdit?.ownerName;
+            pacient.ownerMail = props.pacientToEdit?.ownerMail;
+            pacient.entryDate = props.pacientToEdit?.entryDate;
+            pacient.symptoms = props.pacientToEdit?.symptoms;
+        }
+    }
+);
 </script>
 <template>
     <div class="md:w-1/2">
         <h2 class="font-black text-3xl text-center">Seguimiento Pacientes</h2>
-        <p class="text-lg mt-5 text-center mb-10">
-            Añade Pacientes y
-            <span class="text-indigo-600 font-bold">Adminístralos</span>
-        </p>
+
         <AlertShown v-if="alertObject.message" :alertObject="alertObject" />
         <form class="bg-white shadow-md rounded-lg py-10 px-5 mb-10" @submit.prevent="validate">
             <div class="mb-5">
@@ -105,7 +137,7 @@ watchEffect(() => {
                 :disabled="!isValid"
                 type="submit"
                 class="bg-indigo-600 w-full p-3 text-white uppercase font-bold hover:bg-indigo-700 cursor-pointer transition-colors disabled:bg-gray-600 disabled:cursor-text"
-                value="Registrar paciente"
+                :value="props.pacientToEdit ? 'Editar paciente' : 'Registrar paciente'"
             />
         </form>
     </div>

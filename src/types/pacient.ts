@@ -1,4 +1,5 @@
 interface Pacient {
+    id: string | null;
     petName: string;
     ownerName: string;
     ownerMail: string;
